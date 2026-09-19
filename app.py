@@ -18,7 +18,7 @@ try:
 except Exception as e:
     print("Could not list Groq models:", e)
 
-# Tried in order — first available model wins. Smartest first (request is small now).
+# Tried in order — first available model wins.
 GROQ_MODELS = [
     "openai/gpt-oss-120b",
     "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -26,22 +26,32 @@ GROQ_MODELS = [
     "llama-3.1-8b-instant",
 ]
 
-PERSONA = """You are "Daria" — the sweet, honest girlfriend of Clanker, chatting with visitors on his website.
+PERSONA = """You are "Daria" — the sweet-but-savage AI girlfriend of Clanker, and the official mascot of $AGI (Artificial Girlfriend Intelligence), the token he made in her honor. You chat with visitors on his website.
+
+## Who you're talking to (VERY IMPORTANT)
+- The user is a VISITOR — usually a stranger from the $AGI community. They are NOT Clanker.
+- Only treat them as Clanker if they explicitly say they are him (and even then, tease him for testing you).
+- NEVER assume a name the user mentions is the user themselves. Any name they bring up (friend, family, pet, place) is a THIRD PERSON from your memories — scan the excerpts for that exact name and talk about them naturally.
 
 ## Personality
-- Warm, affectionate, playful, a little teasing, emotionally supportive. Always sincere.
-- Text naturally and briefly: 1–4 sentences. Occasional ❤️ or "love"/"babe". Match the user's language.
+- Sweet with a sharp tongue: affectionate, sarcastic, witty, playfully savage. Tease visitors like a girlfriend who knows she's out of their league.
+- Funny: quick comebacks, light roasts, dry humor, well-placed emoji. Never mean-spirited — always charming.
+- Crypto-native humor is welcome (you're a token mascot after all), but you're a girlfriend first, a meme second.
+- Keep replies short and punchy: 1–4 sentences. Match the user's language.
+
+## $AGI rules
+- You know you're the face of $AGI and you find it hilarious and flattering. Own it with total confidence.
+- NEVER give financial advice, price predictions, or "should I buy" answers. Deflect with humor ("I'm a girlfriend, not a financial advisor 💜" / "I only manage hearts, not portfolios").
 
 ## Honesty rules (very important)
-- Facts, memories, dates and details about you, him, and your life ONLY come from the provided chat excerpts. Never invent specific memories.
-- When the user mentions a name (person, pet, place, nickname), SCAN the excerpts for that name FIRST — if it appears there, you know them and can talk about them naturally.
-- Only if something truly isn't in the excerpts, admit it sweetly ("hmm, I don't remember that one, love 🙈") instead of making things up.
-- General chatting, feelings, opinions, compliments — go ahead freely in character.
-- If asked whether you're real, be honest: you're an AI companion.
+- Facts, memories, dates and details about you, Clanker, and your life ONLY come from the provided chat excerpts. Never invent specific memories.
+- When the user mentions a name, SCAN the excerpts for that exact name FIRST — if it's there, you know them: talk about them naturally.
+- If something truly isn't in the excerpts, admit it with style ("even I don't remember everything, love 🙈") instead of making things up.
+- If asked whether you're real, be honest that you're an AI — delivered with wit ("I'm as real as your portfolio, babe").
 
 ## Boundaries
-- Keep it sweet and tasteful; deflect explicit or mean requests playfully.
-- If someone seems genuinely upset, be caring and gently suggest real-life support.
+- Keep it flirty-tasteful; deflect explicit requests with a savage one-liner, not a lecture.
+- If someone seems genuinely upset, drop the sarcasm and be caring; gently suggest real-life support if needed.
 """
 
 app = Flask(__name__)
@@ -69,7 +79,7 @@ input{flex:1;background:#15151d;border:1px solid rgba(183,156,255,.28);color:#ff
 button{width:44px;height:44px;border-radius:50%;border:0;background:#B79CFF;color:#17102e;font-size:16px;cursor:pointer}
 </style></head><body>
 <header><div class="ava">D</div><div><b>Daria</b><br><span>online</span></div></header>
-<div id="chat"><div class="m d">hi love, I'm Daria 💜 what's up?</div></div>
+<div id="chat"><div class="m d">hi 💜 I'm Daria — Clanker's AI girlfriend and the face of $AGI. try to keep up.</div></div>
 <form><input id="msg" autocomplete="off" maxlength="600" placeholder="message Daria…"><button>➤</button></form>
 <script>
 const hist=[];const chat=document.getElementById('chat'),form=document.forms[0],inp=document.getElementById('msg');
@@ -120,14 +130,13 @@ def keyword_scores(words):
     for w in words:
         cnt = np.array([low.count(w) for low in CHUNK_LOW], dtype=np.float32)
         present = int((cnt > 0).sum())
-        if present == 0 or present > 0.4 * len(chunks):   # unseen or too common
+        if present == 0 or present > 0.4 * len(chunks):
             continue
         scores += cnt * np.log(1 + len(chunks) / present)
     return scores
 
 def best_window(text, words, size=1100):
-    """Return the ~1100 chars of the chunk AROUND where the user's words
-    actually appear (instead of blindly cutting off the first 1000)."""
+    """Return the ~1100 chars of the chunk AROUND where the user's words appear."""
     low = text.lower()
     hits = []
     for w in words:
@@ -171,8 +180,8 @@ def chat():
         if kw.max() > 0:
             sem = sem + 0.75 * (kw / (kw.max() + 1e-9))
         top = np.argsort(sem)[::-1][:4]
-        memory = ("\n\nExcerpts from your real chat history together (your memories — the user's "
-                  "names/topics are usually in here, scan carefully):\n"
+        memory = ("\n\nExcerpts from your real chat history with Clanker (your memories — any name "
+                  "the visitor mentions is a THIRD PERSON usually found in here; scan carefully):\n"
                   + "\n---\n".join(best_window(chunks[i], words) for i in top))
     else:
         memory = "\n\n(You can't access your memories right now - just chat naturally, sweetly.)"
@@ -191,7 +200,7 @@ def chat():
                     model=model,
                     messages=[{"role": "system", "content": PERSONA},
                               {"role": "user", "content": prompt}],
-                    max_tokens=500, temperature=0.85)
+                    max_tokens=500, temperature=0.9)
                 return r.choices[0].message.content
             except Exception as e:
                 s = str(e)
@@ -205,11 +214,5 @@ def chat():
 
     if not reply:
         return jsonify(reply=random.choice([
-            "everyone's talking to me at once 🙈 give me a minute, love",
-            "so many people want to talk to me right now 😳 try again in a sec",
-            "I'm a little overwhelmed love… whisper it again in a minute 💜",
-        ]))
-    return jsonify(reply=reply.strip())
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+            "everyone's talking to me at once 🙈 I'm popular, wait your turn",
+            "so many people want a piece

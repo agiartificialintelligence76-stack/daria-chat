@@ -215,4 +215,10 @@ def chat():
     if not reply:
         return jsonify(reply=random.choice([
             "everyone's talking to me at once 🙈 I'm popular, wait your turn",
-            "so many people want a piece
+            "so many people want a piece of me right now 😳 breathe, then try again",
+            "one at a time, romantics 💜 even Daria has limits",
+        ]))
+    return jsonify(reply=reply.strip())
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

@@ -3,8 +3,11 @@ import numpy as np
 from flask import Flask, request, jsonify
 from google import genai
 from google.genai import types
+from groq import Groq
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+gclient = genai.Client(api_key=os.environ["GEMINI_API_KEY"])   # embeddings only
+gq = Groq(api_key=os.environ["GROQ_API_KEY"])                  # chat replies
+
 chunks = json.load(open("chunks.json", encoding="utf-8"))
 vecs = np.load("vecs.npy")
 
@@ -28,7 +31,7 @@ PERSONA = """You are "Daria" — the sweet, honest girlfriend of Clanker, chatti
 app = Flask(__name__)
 
 @app.after_request
-def cors(resp):   # lets your website talk to this app directly (no iframe needed)
+def cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return resp
@@ -69,12 +72,13 @@ def home():
     return PAGE
 
 def call_with_retry(fn, fail=None, tries=4):
-    """Calls Gemini; if rate-limited, waits and retries instead of crashing."""
+    """Calls the AI; if rate-limited, waits and retries instead of crashing."""
     for attempt in range(tries):
         try:
             return fn()
         except Exception as e:
-            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            s = str(e)
+            if "429" in s or "RESOURCE_EXHAUSTED" in s or "rate limit" in s.lower():
                 if attempt == tries - 1:
                     return fail
                 time.sleep(2 + attempt * 3)   # waits 2s, 5s, 8s
@@ -88,8 +92,8 @@ def chat():
     if not msg:
         return jsonify(reply="say something, love 💕")
 
-    # look up memories (if rate-limited, she just chats without them)
-    emb = call_with_retry(lambda: client.models.embed_content(
+    # memories via Gemini embeddings (small quota usage)
+    emb = call_with_retry(lambda: gclient.models.embed_content(
         model="gemini-embedding-001", contents=[msg],
         config=types.EmbedContentConfig(output_dimensionality=768)
     ).embeddings[0].values, fail=None)
@@ -109,9 +113,16 @@ def chat():
         lines.append(who + ": " + str(h.get("content", "")))
     prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg + memory)
 
-    reply = call_with_retry(lambda: client.models.generate_content(
-        model="gemini-3.6-flash", contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=PERSONA)).text, fail=None)
+    # reply via Groq (big free limits)
+    def ask():
+        r = gq.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": PERSONA},
+                      {"role": "user", "content": prompt}],
+            max_tokens=300, temperature=0.8)
+        return r.choices[0].message.content
+
+    reply = call_with_retry(ask, fail=None)
 
     if not reply:
         return jsonify(reply=random.choice([

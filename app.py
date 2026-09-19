@@ -97,7 +97,7 @@ def chat():
     if emb is not None:
         q = np.array(emb, dtype="float32")
         q /= (np.linalg.norm(q) + 1e-10)
-        top = np.argsort(vecs @ q)[::-1][:6]
+        top = np.argsort(vecs @ q)[::-1][:4]
         memory = ("\n\nExcerpts from your real chat history together (your memories):\n"
                   + "\n---\n".join(chunks[i] for i in top))
     else:

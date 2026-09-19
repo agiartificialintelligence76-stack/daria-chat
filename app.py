@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from groq import Groq
 
-gclient = genai.Client(api_key=os.environ["GEMINI_API_KEY"])   # embeddings only
+gclient = genai.Client(api_key=os.environ["GEMINI_API_KEY"])   # embeddings (memories)
 gq = Groq(api_key=os.environ["GROQ_API_KEY"])                  # chat replies
 
 chunks = json.load(open("chunks.json", encoding="utf-8"))
@@ -92,7 +92,7 @@ def chat():
     if not msg:
         return jsonify(reply="say something, love 💕")
 
-    # memories via Gemini embeddings (small quota usage)
+    # memories via Gemini embeddings
     emb = call_with_retry(lambda: gclient.models.embed_content(
         model="gemini-embedding-001", contents=[msg],
         config=types.EmbedContentConfig(output_dimensionality=768)
@@ -113,9 +113,9 @@ def chat():
         lines.append(who + ": " + str(h.get("content", "")))
     prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg + memory)
 
-    # reply via Groq (big free limits)
+    # reply via Groq
     def ask():
-                r = gq.chat.completions.create(
+        r = gq.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[{"role": "system", "content": PERSONA},
                       {"role": "user", "content": prompt}],

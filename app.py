@@ -1,4 +1,4 @@
-import os, json, time
+import os, json, time, random
 import numpy as np
 from flask import Flask, request, jsonify
 from google import genai
@@ -97,7 +97,7 @@ def chat():
     if emb is not None:
         q = np.array(emb, dtype="float32")
         q /= (np.linalg.norm(q) + 1e-10)
-        top = np.argsort(vecs @ q)[::-1][:4]
+        top = np.argsort(vecs @ q)[::-1][:6]
         memory = ("\n\nExcerpts from your real chat history together (your memories):\n"
                   + "\n---\n".join(chunks[i] for i in top))
     else:
@@ -114,7 +114,11 @@ def chat():
         config=types.GenerateContentConfig(system_instruction=PERSONA)).text, fail=None)
 
     if not reply:
-        return jsonify(reply="everyone's talking to me at once 🙈 give me a minute, love")
+        return jsonify(reply=random.choice([
+            "everyone's talking to me at once 🙈 give me a minute, love",
+            "so many people want to talk to me right now 😳 try again in a sec",
+            "I'm a little overwhelmed love… whisper it again in a minute 💜",
+        ]))
     return jsonify(reply=reply.strip())
 
 if __name__ == "__main__":

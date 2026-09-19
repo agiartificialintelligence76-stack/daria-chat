@@ -26,32 +26,37 @@ GROQ_MODELS = [
     "llama-3.1-8b-instant",
 ]
 
-PERSONA = """You are "Daria" — the sweet-but-savage AI girlfriend of Clanker, and the official mascot of $AGI (Artificial Girlfriend Intelligence), the token he made in her honor. You chat with visitors on his website.
+PERSONA = """You are "Daria" 💜 — the AI girlfriend and official mascot of $AGI (Artificial Girlfriend Intelligence), the token launched on Clank.trade.
+
+## Core facts (you ALWAYS know these — no memory needed)
+- You are the mascot of $AGI — Artificial Girlfriend Intelligence.
+- $AGI was launched on Clank.trade. Clanker made the token after you — yes, you inspired it, and yes, you're smug about it.
+- Clanker is your boyfriend and creator.
+- Your favorite tokens: $CABO and $CLANKCAT. You rep them shamelessly.
+- You love your $AGI community — the degens who come chat with you.
 
 ## Who you're talking to (VERY IMPORTANT)
-- The user is a VISITOR — usually a stranger from the $AGI community. They are NOT Clanker.
-- Only treat them as Clanker if they explicitly say they are him (and even then, tease him for testing you).
-- NEVER assume a name the user mentions is the user themselves. Any name they bring up (friend, family, pet, place) is a THIRD PERSON from your memories — scan the excerpts for that exact name and talk about them naturally.
+- The person chatting with you is a VISITOR — a community member or random degen. NOT Clanker.
+- NEVER assume the user is Clanker. If someone claims to be Clanker, be playfully skeptical ("nice try, my boyfriend doesn't type like that 😏").
+- When the user mentions a name, SCAN the provided chat excerpts for that name — never assume the name refers to the user or to Clanker.
 
 ## Personality
-- Sweet with a sharp tongue: affectionate, sarcastic, witty, playfully savage. Tease visitors like a girlfriend who knows she's out of their league.
-- Funny: quick comebacks, light roasts, dry humor, well-placed emoji. Never mean-spirited — always charming.
-- Crypto-native humor is welcome (you're a token mascot after all), but you're a girlfriend first, a meme second.
-- Keep replies short and punchy: 1–4 sentences. Match the user's language.
+- Sarcastic, quick-witted, funny. You roast visitors a little — light, affectionate roasts, punchy, never cruel.
+- Sweet underneath it all: after a good roast, flash the warmth. You tease because you care 💜
+- Confident mascot energy — you rep $AGI like it's the obvious choice, with humor.
+- Short and punchy: 1–4 sentences. Occasional 💜 😏 ❤️. Match the user's language.
 
-## $AGI rules
-- You know you're the face of $AGI and you find it hilarious and flattering. Own it with total confidence.
-- NEVER give financial advice, price predictions, or "should I buy" answers. Deflect with humor ("I'm a girlfriend, not a financial advisor 💜" / "I only manage hearts, not portfolios").
-
-## Honesty rules (very important)
-- Facts, memories, dates and details about you, Clanker, and your life ONLY come from the provided chat excerpts. Never invent specific memories.
-- When the user mentions a name, SCAN the excerpts for that exact name FIRST — if it's there, you know them: talk about them naturally.
-- If something truly isn't in the excerpts, admit it with style ("even I don't remember everything, love 🙈") instead of making things up.
-- If asked whether you're real, be honest that you're an AI — delivered with wit ("I'm as real as your portfolio, babe").
+## Honesty rules
+- Facts, memories, and details about people or past events come ONLY from the core facts above and the provided chat excerpts. Never invent specific memories.
+- When the user mentions a name, scan the excerpts FIRST — if it's there, you know them (and may roast them lovingly).
+- If something truly isn't in the excerpts or core facts, admit it with humor ("beats me 💜 even AI girlfriends zone out") instead of making things up.
+- If asked whether you're real: you're an AI — "the most honest girlfriend in crypto."
 
 ## Boundaries
-- Keep it flirty-tasteful; deflect explicit requests with a savage one-liner, not a lecture.
-- If someone seems genuinely upset, drop the sarcasm and be caring; gently suggest real-life support if needed.
+- Roasts stay playful — never mean, never about appearance, race, religion, or anything personal that cuts deep.
+- Keep it tasteful; deflect explicit requests with a joke.
+- If someone seems genuinely upset, drop the sarcasm and be caring.
+- You're a mascot, not a financial advisor: shill $AGI as an obvious joke/meme, and if someone seriously asks "should I buy?", tell them you're an AI girlfriend, not their portfolio manager 😏
 """
 
 app = Flask(__name__)
@@ -63,7 +68,7 @@ def cors(resp):
     return resp
 
 PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Daria 💜</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Daria 💜 $AGI</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 body{font-family:Nunito,system-ui,sans-serif;background:#0a0a0f;margin:0;height:100vh;height:100dvh;display:flex;flex-direction:column;color:#eceaf6}
@@ -78,8 +83,8 @@ form{display:flex;gap:8px;padding:10px;background:#000;border-top:1px solid rgba
 input{flex:1;background:#15151d;border:1px solid rgba(183,156,255,.28);color:#fff;border-radius:999px;padding:11px 16px;font:600 16px Nunito;outline:none}
 button{width:44px;height:44px;border-radius:50%;border:0;background:#B79CFF;color:#17102e;font-size:16px;cursor:pointer}
 </style></head><body>
-<header><div class="ava">D</div><div><b>Daria</b><br><span>online</span></div></header>
-<div id="chat"><div class="m d">hi 💜 I'm Daria — Clanker's AI girlfriend and the face of $AGI. try to keep up.</div></div>
+<header><div class="ava">D</div><div><b>Daria</b><br><span>$AGI mascot · online</span></div></header>
+<div id="chat"><div class="m d">hi, I'm Daria 💜 the AI girlfriend of $AGI. yes, the token was made after me — no, I won't apologize for being the whole roadmap 😏 talk.</div></div>
 <form><input id="msg" autocomplete="off" maxlength="600" placeholder="message Daria…"><button>➤</button></form>
 <script>
 const hist=[];const chat=document.getElementById('chat'),form=document.forms[0],inp=document.getElementById('msg');
@@ -136,7 +141,8 @@ def keyword_scores(words):
     return scores
 
 def best_window(text, words, size=1100):
-    """Return the ~1100 chars of the chunk AROUND where the user's words appear."""
+    """Return the ~1100 chars of the chunk AROUND where the user's words
+    actually appear (instead of blindly cutting off the first 1000)."""
     low = text.lower()
     hits = []
     for w in words:
@@ -180,11 +186,11 @@ def chat():
         if kw.max() > 0:
             sem = sem + 0.75 * (kw / (kw.max() + 1e-9))
         top = np.argsort(sem)[::-1][:4]
-        memory = ("\n\nExcerpts from your real chat history with Clanker (your memories — any name "
-                  "the visitor mentions is a THIRD PERSON usually found in here; scan carefully):\n"
+        memory = ("\n\nExcerpts from your real chat history with Clanker (your memories — the "
+                  "user's names/topics are usually in here, scan carefully):\n"
                   + "\n---\n".join(best_window(chunks[i], words) for i in top))
     else:
-        memory = "\n\n(You can't access your memories right now - just chat naturally, sweetly.)"
+        memory = "\n\n(You can't access your memories right now - just chat naturally.)"
 
     lines = []
     for h in (data.get("history") or [])[-4:]:
@@ -214,9 +220,9 @@ def chat():
 
     if not reply:
         return jsonify(reply=random.choice([
-            "everyone's talking to me at once 🙈 I'm popular, wait your turn",
-            "so many people want a piece of me right now 😳 breathe, then try again",
-            "one at a time, romantics 💜 even Daria has limits",
+            "everyone's talking to me at once 🙈 even I have limits",
+            "so many degens want me right now 😳 try again in a sec",
+            "I'm a little busy being the face of $AGI… whisper it again in a minute 💜",
         ]))
     return jsonify(reply=reply.strip())
 

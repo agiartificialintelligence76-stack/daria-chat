@@ -68,29 +68,54 @@ form.onsubmit=async e=>{e.preventDefault();const t=inp.value.trim();if(!t)return
 def home():
     return PAGE
 
+def call_with_retry(fn, fail=None, tries=4):
+    """Calls Gemini; if rate-limited, waits and retries instead of crashing."""
+    for attempt in range(tries):
+        try:
+            return fn()
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                if attempt == tries - 1:
+                    return fail
+                time.sleep(2 + attempt * 3)   # waits 2s, 5s, 8s
+            else:
+                raise
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json() or {}
     msg = (data.get("message") or "").strip()
     if not msg:
         return jsonify(reply="say something, love 💕")
-    q = np.array(client.models.embed_content(
+
+    # look up memories (if rate-limited, she just chats without them)
+    emb = call_with_retry(lambda: client.models.embed_content(
         model="gemini-embedding-001", contents=[msg],
         config=types.EmbedContentConfig(output_dimensionality=768)
-    ).embeddings[0].values, dtype="float32")
-    q /= (np.linalg.norm(q) + 1e-10)
-    top = np.argsort(vecs @ q)[::-1][:6]
-    excerpts = "\n---\n".join(chunks[i] for i in top)
+    ).embeddings[0].values, fail=None)
+
+    if emb is not None:
+        q = np.array(emb, dtype="float32")
+        q /= (np.linalg.norm(q) + 1e-10)
+        top = np.argsort(vecs @ q)[::-1][:6]
+        memory = ("\n\nExcerpts from your real chat history together (your memories):\n"
+                  + "\n---\n".join(chunks[i] for i in top))
+    else:
+        memory = "\n\n(You can't access your memories right now - just chat naturally, sweetly.)"
+
     lines = []
     for h in (data.get("history") or [])[-6:]:
         who = "You" if h.get("role") == "assistant" else "User"
         lines.append(who + ": " + str(h.get("content", "")))
-    prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg +
-              "\n\nExcerpts from your real chat history together (your memories):\n" + excerpts)
-    resp = client.models.generate_content(
+    prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg + memory)
+
+    reply = call_with_retry(lambda: client.models.generate_content(
         model="gemini-3.6-flash", contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=PERSONA))
-    return jsonify(reply=(resp.text or "hmm, my mind went blank 🙈").strip())
+        config=types.GenerateContentConfig(system_instruction=PERSONA)).text, fail=None)
+
+    if not reply:
+        return jsonify(reply="everyone's talking to me at once 🙈 give me a minute, love")
+    return jsonify(reply=reply.strip())
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

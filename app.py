@@ -94,6 +94,19 @@ def call_with_retry(fn, fail=None, tries=4):
             else:
                 raise
 
+def call_with_retry(fn, fail=None, tries=4):
+    """Calls Gemini; if rate-limited, waits and retries instead of crashing."""
+    for attempt in range(tries):
+        try:
+            return fn()
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                if attempt == tries - 1:
+                    return fail
+                time.sleep(2 + attempt * 3)   # waits 2s, 5s, 8s
+            else:
+                raise
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json() or {}

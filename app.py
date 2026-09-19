@@ -79,7 +79,7 @@ def chat():
     prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg +
               "\n\nExcerpts from your real chat history together (your memories):\n" + excerpts)
     resp = client.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt,
+        model="gemini-2.5-flash", contents=prompt,
         config=types.GenerateContentConfig(system_instruction=PERSONA))
     return jsonify(reply=(resp.text or "hmm, my mind went blank 🙈").strip())
 

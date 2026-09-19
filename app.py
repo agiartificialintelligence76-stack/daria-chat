@@ -92,7 +92,7 @@ def chat():
     if not msg:
         return jsonify(reply="say something, love 💕")
 
-    # memories via Gemini embeddings
+    # memories via Gemini embeddings (top 3, trimmed to keep requests small)
     emb = call_with_retry(lambda: gclient.models.embed_content(
         model="gemini-embedding-001", contents=[msg],
         config=types.EmbedContentConfig(output_dimensionality=768)
@@ -101,25 +101,26 @@ def chat():
     if emb is not None:
         q = np.array(emb, dtype="float32")
         q /= (np.linalg.norm(q) + 1e-10)
-        top = np.argsort(vecs @ q)[::-1][:6]
+        top = np.argsort(vecs @ q)[::-1][:3]
         memory = ("\n\nExcerpts from your real chat history together (your memories):\n"
-                  + "\n---\n".join(chunks[i] for i in top))
+                  + "\n---\n".join(chunks[i][:1000] for i in top))
     else:
         memory = "\n\n(You can't access your memories right now - just chat naturally, sweetly.)"
 
+    # short history: last 4 messages, trimmed
     lines = []
-    for h in (data.get("history") or [])[-6:]:
+    for h in (data.get("history") or [])[-4:]:
         who = "You" if h.get("role") == "assistant" else "User"
-        lines.append(who + ": " + str(h.get("content", "")))
+        lines.append(who + ": " + str(h.get("content", ""))[:300])
     prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg + memory)
 
     # reply via Groq
     def ask():
         r = gq.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "system", "content": PERSONA},
                       {"role": "user", "content": prompt}],
-            max_tokens=500, temperature=0.8)
+            max_tokens=250, temperature=0.85)
         return r.choices[0].message.content
 
     reply = call_with_retry(ask, fail=None)

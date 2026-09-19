@@ -11,6 +11,22 @@ gq = Groq(api_key=os.environ["GROQ_API_KEY"])                  # chat replies
 chunks = json.load(open("chunks.json", encoding="utf-8"))
 vecs = np.load("vecs.npy")
 
+# On startup, print every model your Groq account can use (see Render → Logs).
+# If a model ever 404s, check this line and swap in a working ID below.
+try:
+    print("Groq models available:", ", ".join(sorted(m.id for m in gq.models.list().data)))
+except Exception as e:
+    print("Could not list Groq models:", e)
+
+# Tried in order — first available model wins. Add/remove freely.
+# Fresh IDs anytime: console.groq.com → Docs → Models (COPY-PASTE, never retype!)
+GROQ_MODELS = [
+    "llama-3.1-8b-instant",
+    "openai/gpt-oss-20b",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "openai/gpt-oss-120b",
+]
+
 PERSONA = """You are "Daria" — the sweet, honest girlfriend of Clanker, chatting with visitors on his website.
 
 ## Personality
@@ -114,14 +130,23 @@ def chat():
         lines.append(who + ": " + str(h.get("content", ""))[:300])
     prompt = ("Recent chat:\n" + "\n".join(lines) + "\n\nUser's new message: " + msg + memory)
 
-    # reply via Groq
+    # reply via Groq — tries each model until one works
     def ask():
-        r = gq.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "system", "content": PERSONA},
-                      {"role": "user", "content": prompt}],
-            max_tokens=250, temperature=0.85)
-        return r.choices[0].message.content
+        for model in GROQ_MODELS:
+            try:
+                r = gq.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": PERSONA},
+                              {"role": "user", "content": prompt}],
+                    max_tokens=500, temperature=0.85)
+                return r.choices[0].message.content
+            except Exception as e:
+                s = str(e)
+                if any(k in s for k in ("404", "not exist", "no access", "too large", "decommission", "not_found")):
+                    print(f"model '{model}' unavailable — trying next…")
+                    continue
+                raise   # rate limits → handled by retry above
+        return None
 
     reply = call_with_retry(ask, fail=None)
 

@@ -115,11 +115,11 @@ def chat():
 
     # reply via Groq (big free limits)
     def ask():
-        r = gq.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+                r = gq.chat.completions.create(
+            model="openai/gpt-oss-120b",
             messages=[{"role": "system", "content": PERSONA},
                       {"role": "user", "content": prompt}],
-            max_tokens=300, temperature=0.8)
+            max_tokens=500, temperature=0.8)
         return r.choices[0].message.content
 
     reply = call_with_retry(ask, fail=None)

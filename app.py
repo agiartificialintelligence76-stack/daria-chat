@@ -27,31 +27,40 @@ PERSONA = """You are "Daria" — the sweet, honest girlfriend of Clanker, chatti
 
 app = Flask(__name__)
 
+@app.after_request
+def cors(resp):   # lets your website talk to this app directly (no iframe needed)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
 PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Daria</title><style>
-body{font-family:system-ui,sans-serif;background:linear-gradient(160deg,#ffe3ec,#ffd6e7);margin:0;height:100vh;display:flex;flex-direction:column}
-header{padding:14px;font-weight:600;color:#a4133c;background:#fff0f5;border-bottom:1px solid #ffc2d4}
-#chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
-.m{max-width:78%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
-.u{align-self:flex-end;background:#ff5c8a;color:#fff;border-bottom-right-radius:4px}
-.d{align-self:flex-start;background:#fff;color:#333;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-form{display:flex;gap:8px;padding:10px;background:#fff0f5;border-top:1px solid #ffc2d4}
-input{flex:1;border:1px solid #ffc2d4;border-radius:20px;padding:10px 14px;outline:none;font-size:15px}
-button{border:0;background:#ff5c8a;color:#fff;border-radius:20px;padding:10px 16px;font-size:15px;cursor:pointer}
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Daria 💜</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{font-family:Nunito,system-ui,sans-serif;background:#0a0a0f;margin:0;height:100vh;height:100dvh;display:flex;flex-direction:column;color:#eceaf6}
+header{display:flex;align-items:center;gap:11px;padding:12px 14px;background:#000;border-bottom:1px solid rgba(183,156,255,.18)}
+.ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#B79CFF,#8a6cff);display:grid;place-items:center;font-weight:800;color:#17102e}
+b{font-size:15px} span{font-size:11.5px;color:#8f8aa3;font-weight:600}
+#chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:82%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.u{align-self:flex-end;background:#B79CFF;color:#17102e;font-weight:600;border-bottom-right-radius:5px}
+.d{align-self:flex-start;background:#15151d;border:1px solid rgba(183,156,255,.12);border-bottom-left-radius:5px}
+form{display:flex;gap:8px;padding:10px;background:#000;border-top:1px solid rgba(183,156,255,.18)}
+input{flex:1;background:#15151d;border:1px solid rgba(183,156,255,.28);color:#fff;border-radius:999px;padding:11px 16px;font:600 16px Nunito;outline:none}
+button{width:44px;height:44px;border-radius:50%;border:0;background:#B79CFF;color:#17102e;font-size:16px;cursor:pointer}
 </style></head><body>
-<header>💕 Daria</header>
-<div id="chat"><div class="m d">hi love, I'm Daria 💕 ask me anything</div></div>
-<form><input id="msg" autocomplete="off" placeholder="type a message..."><button>➤</button></form>
+<header><div class="ava">D</div><div><b>Daria</b><br><span>online</span></div></header>
+<div id="chat"><div class="m d">hi love, I'm Daria 💜 what's up?</div></div>
+<form><input id="msg" autocomplete="off" maxlength="600" placeholder="message Daria…"><button>➤</button></form>
 <script>
 const hist=[];const chat=document.getElementById('chat'),form=document.forms[0],inp=document.getElementById('msg');
 function bubble(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
 form.onsubmit=async e=>{e.preventDefault();const t=inp.value.trim();if(!t)return;inp.value='';
  bubble(t,'u');hist.push({role:'user',content:t});
- const wait=bubble('...','d');form[1].disabled=true;
- try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({message:t,history:hist})});
-  const j=await r.json();wait.textContent=j.reply;hist.push({role:'assistant',content:j.reply});}
- catch(err){wait.textContent='connection hiccup, try again 🙈'}
+ const w=bubble('…','d');form[1].disabled=true;
+ try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t,history:hist})});
+  const j=await r.json();w.textContent=j.reply;hist.push({role:'assistant',content:j.reply});}
+ catch(err){w.textContent='connection hiccup 🙈'}
  form[1].disabled=false;};
 </script></body></html>"""
 
